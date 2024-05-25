@@ -2,7 +2,7 @@
  	@author 	 harsh-dhamecha
  	@email       harshdhamecha10@gmail.com
  	@create date 2024-05-25 11:06:48
- 	@modify date 2024-05-25 14:23:01
+ 	@modify date 2024-05-25 14:38:10
  	@desc        An app file for IG Caption Generator
  '''
 
@@ -18,9 +18,24 @@ from langchain_community.llms import OpenAI
 # Set up the OpenAI API key
 os.environ['OPENAI_API_KEY'] = st.secrets['OPENAI_API_KEY']
 
+# Set the page configuration
+st.set_page_config(
+    page_title="Instagram Caption Generator",
+    page_icon=":camera:",  # Optional, you can use an emoji as an icon
+    layout="centered",  # Optional, layout can be "centered" or "wide"
+    initial_sidebar_state="auto"  # Optional, can be "auto", "expanded", or "collapsed"
+)
+
+
+# Set a cache directory
+cache_dir = "./model_cache"
+
+# Ensure the cache directory exists
+os.makedirs(cache_dir, exist_ok=True)
+
 # Load the BLIP model and processor
-processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
+model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
 
 # Streamlit app title
 st.title("Instagram Caption Generator")
