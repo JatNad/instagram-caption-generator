@@ -1,10 +1,10 @@
-'''
+"""
  	@author 	 harsh-dhamecha
  	@email       harshdhamecha10@gmail.com
  	@create date 2024-05-25 11:06:48
- 	@modify date 2024-05-25 15:01:59
+ 	@modify date 2024-05-25 16:52:51
  	@desc        An app file for IG Caption Generator
- '''
+"""
 
 import os
 import streamlit as st
@@ -26,18 +26,24 @@ st.set_page_config(
     initial_sidebar_state="auto"  # Optional, can be "auto", "expanded", or "collapsed"
 )
 
+# Streamlit app title
+st.title("Instagram Caption Generator")
+
 # Set a cache directory
 cache_dir = "./model_cache"
 
 # Ensure the cache directory exists
 os.makedirs(cache_dir, exist_ok=True)
 
-# Load the BLIP model and processor
-processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
-model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
+# Cache the model loading to avoid reloading on every interaction
+@st.cache_resource
+def load_blip_model():
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
+    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
+    return processor, model
 
-# Streamlit app title
-st.title("Instagram Caption Generator")
+# Load the models
+processor, model = load_blip_model()
 
 # Image uploader
 uploaded_files = st.file_uploader("Choose images", accept_multiple_files=True, type=["jpg", "png", "jpeg"])
