@@ -2,7 +2,7 @@
  	@author 	 harsh-dhamecha
  	@email       harshdhamecha10@gmail.com
  	@create date 2024-05-25 11:06:48
- 	@modify date 2024-05-25 12:53:00
+ 	@modify date 2024-05-25 13:08:17
  	@desc        An app file for IG Caption Generator
  '''
 
@@ -35,7 +35,6 @@ if uploaded_files:
     for file in uploaded_files:
         img = Image.open(file)
         images.append(img)
-        st.image(img, caption=file.name)
 
 # Function to generate a caption based on all images
 def generate_caption(images):
@@ -53,7 +52,7 @@ def generate_caption(images):
     # Define a prompt template
     prompt_template = PromptTemplate(
         input_variables=["image_description"],
-        template="Generate a creative Instagram caption for these images: {image_description}"
+        template="Generate 10 creative Instagram caption for these images: {image_description}"
     )
 
     # Initialize the OpenAI model within LangChain
