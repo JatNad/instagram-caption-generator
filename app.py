@@ -2,7 +2,7 @@
  	@author 	 harsh-dhamecha
  	@email       harshdhamecha10@gmail.com
  	@create date 2024-05-25 11:06:48
- 	@modify date 2024-05-25 13:52:47
+ 	@modify date 2024-05-25 14:23:01
  	@desc        An app file for IG Caption Generator
  '''
 
@@ -43,12 +43,14 @@ if enable_customization:
     st.markdown("**Try our customization options to create a unique and tailored caption!**")
 
     # Caption customization options
+    n_captions = st.selectbox("How many Captions you want to generate?", ["1", "2", "5", "10"])
     caption_style = st.selectbox("Select Caption Style", ["Formal", "Informal", "Humorous", "Inspirational"])
     caption_length = st.selectbox("Select Caption Length", ["Short", "Medium", "Long"])
     include_emojis = st.checkbox("Include Emojis")
     custom_hashtags = st.text_input("Add Hashtags (comma-separated)")
     language = st.selectbox("Select Language", ["English", "Spanish", "French", "German"])
 else:
+    n_captions = 1
     caption_style = "Formal"
     caption_length = "Medium"
     include_emojis = False
@@ -56,7 +58,7 @@ else:
     language = "English"
 
 # Function to generate a caption based on all images
-def generate_caption(images, style, length, emojis, hashtags, lang):
+def generate_caption(images, n_captions, style, length, emojis, hashtags, lang):
     descriptions = []
     for img in images:
         # Generate description using BLIP model
@@ -72,7 +74,7 @@ def generate_caption(images, style, length, emojis, hashtags, lang):
     prompt_template = PromptTemplate(
         input_variables=["image_description", "style", "length", "emojis", "hashtags", "lang"],
         template=(
-            "Generate a {style} Instagram caption for these images: {image_description}. "
+            "Generate {n_captions} {style} Instagram caption for these images: {image_description}. "
             "The caption should be {length} and in {lang}. "
             "{emojis} {hashtags}"
         )
@@ -89,6 +91,7 @@ def generate_caption(images, style, length, emojis, hashtags, lang):
     hashtag_text = f"Include these hashtags: {hashtags}" if hashtags else ""
     generated_caption = chain.run({
         "image_description": combined_description,
+        "n_captions": n_captions,
         "style": style.lower(),
         "length": length.lower(),
         "emojis": emoji_text,
@@ -100,6 +103,6 @@ def generate_caption(images, style, length, emojis, hashtags, lang):
 
 # Display generated caption
 if st.button("Generate Caption") and images:
-    caption = generate_caption(images, caption_style, caption_length, include_emojis, custom_hashtags, language)
+    caption = generate_caption(images, n_captions, caption_style, caption_length, include_emojis, custom_hashtags, language)
     st.write("Generated Caption:")
     st.write(caption)
