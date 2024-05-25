@@ -2,7 +2,7 @@
  	@author 	 harsh-dhamecha
  	@email       harshdhamecha10@gmail.com
  	@create date 2024-05-25 11:06:48
- 	@modify date 2024-05-25 14:38:10
+ 	@modify date 2024-05-25 15:01:59
  	@desc        An app file for IG Caption Generator
  '''
 
@@ -25,7 +25,6 @@ st.set_page_config(
     layout="centered",  # Optional, layout can be "centered" or "wide"
     initial_sidebar_state="auto"  # Optional, can be "auto", "expanded", or "collapsed"
 )
-
 
 # Set a cache directory
 cache_dir = "./model_cache"
@@ -87,7 +86,7 @@ def generate_caption(images, n_captions, style, length, emojis, hashtags, lang):
 
     # Define a prompt template with customization options
     prompt_template = PromptTemplate(
-        input_variables=["image_description", "style", "length", "emojis", "hashtags", "lang"],
+        input_variables=["image_description", "n_captions", "style", "length", "emojis", "hashtags", "lang"],
         template=(
             "Generate {n_captions} {style} Instagram caption for these images: {image_description}. "
             "The caption should be {length} and in {lang}. "
