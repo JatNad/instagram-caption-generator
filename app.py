@@ -2,7 +2,7 @@
  	@author 	 harsh-dhamecha
  	@email       harshdhamecha10@gmail.com
  	@create date 2024-05-25 11:06:48
- 	@modify date 2024-05-25 16:52:51
+ 	@modify date 2024-05-25 18:06:02
  	@desc        An app file for IG Caption Generator
 """
 
@@ -29,11 +29,10 @@ st.set_page_config(
 # Streamlit app title
 st.title("Instagram Caption Generator")
 
-# Set a cache directory
+# Set a cache directory and ensure that it exists
 cache_dir = "./model_cache"
-
-# Ensure the cache directory exists
 os.makedirs(cache_dir, exist_ok=True)
+
 
 # Cache the model loading to avoid reloading on every interaction
 @st.cache_resource
@@ -42,43 +41,15 @@ def load_blip_model():
     model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
     return processor, model
 
-# Load the models
-processor, model = load_blip_model()
 
-# Image uploader
-uploaded_files = st.file_uploader("Choose images", accept_multiple_files=True, type=["jpg", "png", "jpeg"])
+@st.cache_resource
+def load_openai_model():
+    llm = OpenAI(model='gpt-3.5-turbo-instruct')
+    return llm
 
-# List to store images
-images = []
 
-if uploaded_files:
-    for file in uploaded_files:
-        img = Image.open(file)
-        images.append(img)
+def describe_images(images, processor, model):
 
-# Option to enable customization
-enable_customization = st.checkbox("Enable Customization", help="Customize your caption for a more personalized touch!")
-
-if enable_customization:
-    st.markdown("**Try our customization options to create a unique and tailored caption!**")
-
-    # Caption customization options
-    n_captions = st.selectbox("How many Captions you want to generate?", ["1", "2", "5", "10"])
-    caption_style = st.selectbox("Select Caption Style", ["Formal", "Informal", "Humorous", "Inspirational"])
-    caption_length = st.selectbox("Select Caption Length", ["Short", "Medium", "Long"])
-    include_emojis = st.checkbox("Include Emojis")
-    custom_hashtags = st.text_input("Add Hashtags (comma-separated)")
-    language = st.selectbox("Select Language", ["English", "Spanish", "French", "German"])
-else:
-    n_captions = 1
-    caption_style = "Formal"
-    caption_length = "Medium"
-    include_emojis = False
-    custom_hashtags = ""
-    language = "English"
-
-# Function to generate a caption based on all images
-def generate_caption(images, n_captions, style, length, emojis, hashtags, lang):
     descriptions = []
     for img in images:
         # Generate description using BLIP model
@@ -87,42 +58,69 @@ def generate_caption(images, n_captions, style, length, emojis, hashtags, lang):
         description = processor.decode(out[0], skip_special_tokens=True)
         descriptions.append(description)
     
-    # Combine all descriptions into one
-    combined_description = " ".join(descriptions)
+    return " ".join(descriptions)
 
-    # Define a prompt template with customization options
+
+def get_prompt(n_captions, style, length, emojis, hashtags):
+    
     prompt_template = PromptTemplate(
-        input_variables=["image_description", "n_captions", "style", "length", "emojis", "hashtags", "lang"],
+        input_variables=["image_description", "n_captions", "style", "length", "emojis", "hashtags"],
         template=(
             "Generate {n_captions} {style} Instagram caption for these images: {image_description}. "
-            "The caption should be {length} and in {lang}. "
+            "The caption should be {length}"
             "{emojis} {hashtags}"
         )
     )
 
-    # Initialize the OpenAI model within LangChain
-    llm = OpenAI(api_key=openai.api_key)
-    
+    return prompt_template
+
+
+# Function to generate a caption based on all images
+def generate_caption(llm, image_descriptions):
+
+    prompt_template = get_prompt(n_captions, caption_style, caption_length, emojis, hashtags)
     # Create a LangChain chain
     chain = LLMChain(llm=llm, prompt=prompt_template)
 
     # Generate caption using the chain
-    emoji_text = "Include emojis." if emojis else ""
-    hashtag_text = f"Include these hashtags: {hashtags}" if hashtags else ""
+    emoji_text = "Include relevant emojis." if emojis else "Do not include Emojis."
+    hashtag_text = f"Include relevant hashtags." if hashtags else "Do not include Hashtags."
     generated_caption = chain.run({
-        "image_description": combined_description,
+        "image_description": image_descriptions,
         "n_captions": n_captions,
-        "style": style.lower(),
-        "length": length.lower(),
+        "style": caption_style.lower(),
+        "length": caption_length.lower(),
         "emojis": emoji_text,
         "hashtags": hashtag_text,
-        "lang": lang.lower()
     })
     
     return generated_caption
 
+
+# Image uploader
+uploaded_files = st.file_uploader("Choose images", accept_multiple_files=True, type=["jpg", "png", "jpeg"])
+
+# List to store images
+images = []
+if uploaded_files:
+    for file in uploaded_files:
+        img = Image.open(file)
+        images.append(img)
+
+# Load the models
+processor, model = load_blip_model()
+
+# Caption customization options
+n_captions = st.selectbox("Select Number of Captions", ["1", "2", "5", "10"])
+caption_style = st.selectbox("Select Caption Style", ["Formal", "Informal", "Humorous", "Inspirational", "Poetic"])
+caption_length = st.selectbox("Select Caption Length", ["Short", "Medium", "Long"])
+emojis = st.checkbox("Include Relevant Emojis")
+hashtags = st.checkbox("Include Relevant Hashtags")
+
 # Display generated caption
 if st.button("Generate Caption") and images:
-    caption = generate_caption(images, n_captions, caption_style, caption_length, include_emojis, custom_hashtags, language)
+    image_descriptions = describe_images(images, processor, model)
+    llm = load_openai_model()
+    caption = generate_caption(llm, image_descriptions)
     st.write("Generated Caption:")
     st.write(caption)
