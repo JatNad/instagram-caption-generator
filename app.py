@@ -1,119 +1,84 @@
 """
- 	@author 	 harsh-dhamecha
- 	@email       harshdhamecha10@gmail.com
- 	@create date 2024-05-25 11:06:48
- 	@modify date 2024-05-25 19:09:02
- 	@desc        An app file for IG Caption Generator
+    @author     harsh-dhamecha
+    @email      harshdhamecha10@gmail.com
+    @create date 2024-05-29 22:44:17
+    @modify date 2024-06-01 12:56:25
+    @desc       An app file for FastAPI
 """
 
-import os
-import streamlit as st
+from fastapi import FastAPI, UploadFile, File
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
-from langchain.chains import LLMChain
-from langchain.prompts import PromptTemplate
-from langchain_community.llms import OpenAI
+from io import BytesIO
+import openai
+import streamlit as st
+from contextlib import asynccontextmanager
+
 
 # Set up the OpenAI API key
-os.environ['OPENAI_API_KEY'] = st.secrets['OPENAI_API_KEY']
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# Set the page configuration
-st.set_page_config(
-    page_title="Instagram Caption Generator",
-    page_icon=":camera:",  # Optional, you can use an emoji as an icon
-    layout="centered",  # Optional, layout can be "centered" or "wide"
-    initial_sidebar_state="auto"  # Optional, can be "auto", "expanded", or "collapsed"
-)
+app = FastAPI()
 
-# Streamlit app title with color
-st.markdown("<h1 style='color: #ff0000;'>Instagram Caption Generator</h1>", unsafe_allow_html=True)
-st.markdown("<p style='color: #4682b4;'>Upload your images and get creative captions instantly!</p>", unsafe_allow_html=True)
-st.markdown("<p style='color: #32cd32;'>Your images are not stored and are completely safe!</p>", unsafe_allow_html=True)
+class CaptionRequest(BaseModel):
+    description: str
+    n_captions: int
+    caption_style: str
+    caption_length: str
+    include_emojis: bool
+    include_hashtags: bool
 
-# Set a cache directory and ensure that it exists
-cache_dir = "./model_cache"
-os.makedirs(cache_dir, exist_ok=True)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global blip_processor, blip_model
+    blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    blip_model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+    blip_model.eval()
+    yield
+    # No cleanup necessary
 
-# Cache the model loading to avoid reloading on every interaction
-@st.cache_resource
-def load_blip_model():
-    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
-    model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base", cache_dir=cache_dir)
-    return processor, model
+app.router.lifespan_context = lifespan
 
-@st.cache_resource
-def load_openai_model():
-    llm = OpenAI(model='gpt-3.5-turbo-instruct')
-    return llm
 
-def describe_images(images, processor, model):
+@app.post("/describe_images/")
+async def describe_images(files: list[UploadFile] = File(...)):
+    images = []
+    for file in files:
+        image = Image.open(BytesIO(await file.read()))
+        images.append(image)
     descriptions = []
     for img in images:
-        # Generate description using BLIP model
-        inputs = processor(images=img, return_tensors="pt")
-        out = model.generate(**inputs)
-        description = processor.decode(out[0], skip_special_tokens=True)
+        inputs = blip_processor(images=img, return_tensors="pt")
+        outputs = blip_model.generate(**inputs)
+        description = blip_processor.decode(outputs[0], skip_special_tokens=True)
         descriptions.append(description)
-    return " ".join(descriptions)
+    combined_description = " ".join(descriptions)
+    return JSONResponse(content={"description": combined_description})
 
-def get_prompt(n_captions, style, length, emojis, hashtags):
-    prompt_template = PromptTemplate(
-        input_variables=["image_description", "n_captions", "style", "length", "emojis", "hashtags"],
-        template=(
-            "Generate {n_captions} {style} Instagram caption for these images: {image_description}. "
-            "The caption should be {length}"
-            "{emojis} {hashtags}"
-        )
+@app.post("/generate_captions/")
+async def generate_captions(request: CaptionRequest):
+    emoji_text = 'Include relevant emojis.' if request.include_emojis else 'Do not include emojis.'
+    hashtag_text = 'Include relevant hashtags.' if request.include_hashtags else 'Do not include hashtags.'
+    prompt = (
+        f"Generate {request.n_captions} {request.caption_style} Instagram captions for these images: {request.description}. "
+        f"The caption should be {request.caption_length}. "
+        f"{emoji_text} {hashtag_text}"
     )
-    return prompt_template
 
-# Function to generate a caption based on all images
-def generate_caption(llm, image_descriptions, n_captions, caption_style, caption_length, emojis, hashtags):
-    
-    prompt_template = get_prompt(n_captions, caption_style, caption_length, emojis, hashtags)
-    
-    # Create a LangChain chain
-    chain = LLMChain(llm=llm, prompt=prompt_template)
+    response = openai.Completion.create(
+        engine="gpt-3.5-turbo-instruct",
+        prompt=prompt,
+        max_tokens=200,
+        n=1,
+        stop=None,
+        temperature=0.7
+    )
 
-    # Generate caption using the chain
-    emoji_text = "Include relevant emojis." if emojis else "Do not include Emojis."
-    hashtag_text = f"Include relevant hashtags." if hashtags else "Do not include Hashtags."
-    generated_caption = chain.run({
-        "image_description": image_descriptions,
-        "n_captions": n_captions,
-        "style": caption_style.lower(),
-        "length": caption_length.lower(),
-        "emojis": emoji_text,
-        "hashtags": hashtag_text,
-    })
-    return generated_caption
+    captions = [choice.text.strip() for choice in response.choices]
+    return JSONResponse(content={"captions": captions})
 
-# Image uploader
-uploaded_files = st.file_uploader("Choose images", accept_multiple_files=True, type=["jpg", "png", "jpeg"])
-
-# List to store images
-images = []
-if uploaded_files:
-    for file in uploaded_files:
-        img = Image.open(file)
-        images.append(img)
-
-# Load the models
-processor, model = load_blip_model()
-
-# Caption customization options
-n_captions = st.selectbox("Select Number of Captions", ["1", "2", "5", "10"], key="n_captions")
-caption_style = st.selectbox("Select Caption Style", ["Formal", "Informal", "Humorous", "Inspirational", "Poetic"], key="caption_style")
-caption_length = st.selectbox("Select Caption Length", ["Short", "Medium", "Long"], key="caption_length")
-emojis = st.checkbox("Include Relevant Emojis", key="emojis")
-hashtags = st.checkbox("Include Relevant Hashtags", key="hashtags")
-
-if images:
-    generate_button = st.button("Generate Caption")
-    if generate_button:
-        with st.spinner('Generating captions... Please wait...'):
-            image_descriptions = describe_images(images, processor, model)
-            llm = load_openai_model()
-            caption = generate_caption(llm, image_descriptions, n_captions, caption_style, caption_length, emojis, hashtags)
-            st.write("Generated Caption:")
-            st.write(caption)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

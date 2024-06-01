@@ -2,14 +2,25 @@
  	@author 	 harsh-dhamecha
  	@email       harshdhamecha10@gmail.com
  	@create date 2024-05-29 22:35:27
- 	@modify date 2024-05-29 22:44:37
+ 	@modify date 2024-06-01 12:30:11
  	@desc        Streamlit app file
  '''
 
 import streamlit as st
 import requests
 
-st.title("Instagram Caption Generator")
+# Set the page configuration
+st.set_page_config(
+    page_title="Instagram Caption Generator",
+    page_icon=":camera:",  # Optional, you can use an emoji as an icon
+    layout="centered",  # Optional, layout can be "centered" or "wide"
+    initial_sidebar_state="auto"  # Optional, can be "auto", "expanded", or "collapsed"
+)
+
+# Streamlit app title with color
+st.markdown("<h1 style='color: #ff0000;'>Instagram Caption Generator</h1>", unsafe_allow_html=True)
+st.markdown("<p style='color: #4682b4;'>Upload your images and get creative captions instantly!</p>", unsafe_allow_html=True)
+st.markdown("<p style='color: #32cd32;'>Your images are not stored and are completely safe!</p>", unsafe_allow_html=True)
 
 uploaded_files = st.file_uploader("Choose images", accept_multiple_files=True, type=["jpg", "png", "jpeg"])
 
