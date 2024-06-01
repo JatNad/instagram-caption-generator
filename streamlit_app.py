@@ -1,10 +1,9 @@
-'''
- 	@author 	 harsh-dhamecha
- 	@email       harshdhamecha10@gmail.com
- 	@create date 2024-05-29 22:35:27
- 	@modify date 2024-06-01 12:30:11
- 	@desc        Streamlit app file
- '''
+"""
+    @author     harsh-dhamecha
+    @create date 2024-05-29 22:35:27
+    @modify date 2024-06-01 14:57:47
+    @desc       Streamlit app file
+"""
 
 import streamlit as st
 import requests
@@ -37,22 +36,28 @@ include_hashtags = st.checkbox("Include Relevant Hashtags", key="hashtags")
 
 if st.button("Generate Caption"):
     if uploaded_files:
-        files = [("files", (file.name, file, file.type)) for file in uploaded_files]
-        description_response = requests.post("http://localhost:8000/describe_images/", files=files)
-        description = description_response.json()["description"]
-        
-        caption_request = {
-            "description": description,
-            "n_captions": int(n_captions),
-            "caption_style": caption_style,
-            "caption_length": caption_length,
-            "include_emojis": include_emojis,
-            "include_hashtags": include_hashtags
-        }
-        
-        caption_response = requests.post("http://localhost:8000/generate_captions/", json=caption_request)
-        captions = caption_response.json()["captions"]
-        st.write("Generated Caption(s):")
-        for caption in captions:
-            st.write(caption)
-
+        try:
+            files = [("files", (file.name, file, file.type)) for file in uploaded_files]
+            description_response = requests.post("http://localhost:8000/describe_images/", files=files)
+            description_response.raise_for_status()
+            description = description_response.json()["description"]
+            
+            caption_request = {
+                "description": description,
+                "n_captions": int(n_captions),
+                "caption_style": caption_style,
+                "caption_length": caption_length,
+                "include_emojis": include_emojis,
+                "include_hashtags": include_hashtags
+            }
+            
+            caption_response = requests.post("http://localhost:8000/generate_captions/", json=caption_request)
+            caption_response.raise_for_status()
+            captions = caption_response.json()["captions"]
+            st.write("Generated Caption(s):")
+            for caption in captions:
+                st.write(caption)
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error communicating with backend: {e}")
+        except Exception as e:
+            st.error(f"An unexpected error occurred: {e}")
