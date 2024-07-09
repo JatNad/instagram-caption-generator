@@ -1,7 +1,7 @@
 # Instagram Caption Generator
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://instagramcaption.streamlit.app/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://instagramcaptions.streamlit.app/)
 
-An Application to generate Customized Instagram Caption using BLIP and GPT 3.5. 
+An Application to generate Customized Instagram Captions using BLIP and GPT 3.5. 
 
 ## Demo Video
 Releasing soon...
