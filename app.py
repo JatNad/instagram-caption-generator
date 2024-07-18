@@ -2,7 +2,7 @@
  	@author 	 harsh-dhamecha
  	@email       harshdhamecha10@gmail.com
  	@create date 2024-05-25 11:06:48
- 	@modify date 2024-05-25 19:09:02
+ 	@modify date 2024-07-09 22:32:54
  	@desc        An app file for IG Caption Generator
 """
 
