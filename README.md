@@ -4,7 +4,7 @@
 An Application to generate Customized Instagram Captions using BLIP and GPT 3.5. 
 
 ## Demo Video
-Releasing soon...
+[Watch on YouTube](https://youtu.be/ejOKFEm4fsc)
 
 ## Install
 ```bash
